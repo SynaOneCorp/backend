@@ -8,6 +8,9 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
+    val port = environment.config.propertyOrNull("ktor.deployment.testing")?.getString() ?: "8080"
+    println("NMO: port => $port")
+
     configureSockets()
     configureSerialization()
     configureDatabases()
