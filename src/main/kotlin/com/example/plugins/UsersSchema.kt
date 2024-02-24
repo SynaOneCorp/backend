@@ -1,5 +1,7 @@
 package com.example.plugins
 
+import com.example.plugins.common.dbQuery
+import com.example.plugins.question.Question
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -8,36 +10,49 @@ import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.*
 
 @Serializable
-data class ExposedUser(val name: String, val age: Int)
+data class ExposedUser(val username: String, val googleId: String)
 class UserService(private val database: Database) {
     object Users : Table() {
         val id = integer("id").autoIncrement()
-        val name = varchar("name", length = 50)
-        val age = integer("age")
+        val username = varchar("username", length = 50)
+        val googleId = varchar("googleId", length = 50)
 
         override val primaryKey = PrimaryKey(id)
     }
 
     init {
         transaction(database) {
-            SchemaUtils.create(Users)
+            try {
+                SchemaUtils.drop(Users)
+                SchemaUtils.create(Users)
+            } catch (e: Exception) {
+                println("Users table already exists")
+            }
         }
     }
 
-    suspend fun <T> dbQuery(block: suspend () -> T): T =
-        newSuspendedTransaction(Dispatchers.IO) { block() }
-
     suspend fun create(user: ExposedUser): Int = dbQuery {
         Users.insert {
-            it[name] = user.name
-            it[age] = user.age
+            it[username] = user.username
+            it[googleId] = user.googleId
         }[Users.id]
     }
 
     suspend fun read(id: Int): ExposedUser? {
         return dbQuery {
             Users.select { Users.id eq id }
-                .map { ExposedUser(it[Users.name], it[Users.age]) }
+                .map { ExposedUser(it[Users.username], it[Users.googleId]) }
+                .singleOrNull()
+        }
+    }
+
+    suspend fun read(username: String): ExposedUser? {
+        return dbQuery {
+            Users.select { Users.username eq username }
+                .map {
+                    println("TEST12 => $it")
+                    ExposedUser(it[Users.username], it[Users.googleId])
+                }
                 .singleOrNull()
         }
     }
@@ -45,8 +60,8 @@ class UserService(private val database: Database) {
     suspend fun update(id: Int, user: ExposedUser) {
         dbQuery {
             Users.update({ Users.id eq id }) {
-                it[name] = user.name
-                it[age] = user.age
+                it[username] = user.username
+                it[googleId] = user.googleId
             }
         }
     }
