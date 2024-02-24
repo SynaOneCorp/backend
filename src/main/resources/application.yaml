@@ -4,4 +4,6 @@ ktor:
             - com.example.ApplicationKt.module
     deployment:
         port: 8080
-        testing: "$TEST_VARIABLE:prout"
+    environment:
+        oauthClient: $OAUTH_CLIENT
+        oauthSecret: $OAUTH_SECRET

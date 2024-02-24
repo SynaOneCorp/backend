@@ -2,7 +2,6 @@ package com.example.plugins
 
 import io.ktor.server.application.*
 import io.ktor.server.plugins.conditionalheaders.*
-import io.ktor.server.plugins.httpsredirect.*
 
 fun Application.configureHTTP() {
     install(ConditionalHeaders)

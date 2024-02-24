@@ -25,8 +25,8 @@ fun Application.configureSecurity() {
                         authorizeUrl = "https://accounts.google.com/o/oauth2/auth",
                         accessTokenUrl = "https://accounts.google.com/o/oauth2/token",
                         requestMethod = HttpMethod.Post,
-                        clientId = System.getenv("GOOGLE_CLIENT_ID"),
-                        clientSecret = System.getenv("GOOGLE_CLIENT_SECRET"),
+                        clientId = this@configureSecurity.environment.config.propertyOrNull("ktor.environment.oauthClient")!!.getString(),
+                        clientSecret = this@configureSecurity.environment.config.propertyOrNull("ktor.environment.oauthSecret")!!.getString(),
                         defaultScopes = listOf("https://www.googleapis.com/auth/userinfo.profile")
                     )
                 }
