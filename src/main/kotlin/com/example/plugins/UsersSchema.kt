@@ -1,43 +1,102 @@
 package com.example.plugins
 
+import com.example.plugins.common.dbQuery
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import kotlinx.serialization.Serializable
-import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.*
 
 @Serializable
-data class ExposedUser(val name: String, val age: Int)
+data class ExposedUser(
+    val username: String,
+    val googleId: String,
+    val token: String?,
+)
 class UserService(private val database: Database) {
     object Users : Table() {
         val id = integer("id").autoIncrement()
-        val name = varchar("name", length = 50)
-        val age = integer("age")
+        val username = varchar("username", length = 50)
+        val googleId = varchar("googleId", length = 50)
+        val token = varchar("token", length = 250).nullable()
 
         override val primaryKey = PrimaryKey(id)
     }
 
     init {
         transaction(database) {
-            SchemaUtils.create(Users)
+            try {
+                //SchemaUtils.drop(Users)
+                SchemaUtils.create(Users)
+            } catch (e: Exception) {
+                println("Users table already exists")
+            }
         }
     }
 
-    suspend fun <T> dbQuery(block: suspend () -> T): T =
-        newSuspendedTransaction(Dispatchers.IO) { block() }
-
     suspend fun create(user: ExposedUser): Int = dbQuery {
         Users.insert {
-            it[name] = user.name
-            it[age] = user.age
+            it[username] = user.username
+            it[googleId] = user.googleId
+            it[token] = user.token
         }[Users.id]
     }
 
-    suspend fun read(id: Int): ExposedUser? {
+    suspend fun readById(id: Int): ExposedUser? {
         return dbQuery {
             Users.select { Users.id eq id }
-                .map { ExposedUser(it[Users.name], it[Users.age]) }
+                .map {
+                    ExposedUser(
+                        it[Users.username],
+                        it[Users.googleId],
+                        it[Users.token],
+                    )
+                }
+                .singleOrNull()
+        }
+    }
+
+    suspend fun readAll(): List<ExposedUser> {
+        return dbQuery {
+            Users
+                .selectAll()
+                .map {
+                    ExposedUser(
+                        it[Users.username],
+                        it[Users.googleId],
+                        it[Users.token],
+                    )
+                }
+        }
+    }
+
+    suspend fun readByUsername(
+        username: String,
+    ): ExposedUser? {
+        return dbQuery {
+            Users.select { Users.username eq username }
+                .map {
+                    ExposedUser(
+                        it[Users.username],
+                        it[Users.googleId],
+                        it[Users.token],
+                    )
+                }
+                .singleOrNull()
+        }
+    }
+
+    suspend fun readByAccessToken(
+        accessToken: String,
+    ): ExposedUser? {
+        return dbQuery {
+            Users.select { Users.token eq accessToken }
+                .map {
+                    ExposedUser(
+                        it[Users.username],
+                        it[Users.googleId],
+                        it[Users.token],
+                    )
+                }
                 .singleOrNull()
         }
     }
@@ -45,8 +104,8 @@ class UserService(private val database: Database) {
     suspend fun update(id: Int, user: ExposedUser) {
         dbQuery {
             Users.update({ Users.id eq id }) {
-                it[name] = user.name
-                it[age] = user.age
+                it[username] = user.username
+                it[googleId] = user.googleId
             }
         }
     }
